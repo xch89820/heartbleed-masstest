@@ -116,7 +116,7 @@ def hit_hb(s):
             return False
 
 
-def is_vulnerable(host, timeout):
+def is_vulnerable(host, port, timeout):
     """ Check if remote host is vulnerable to heartbleed
 
      Returns:
@@ -127,7 +127,7 @@ def is_vulnerable(host, timeout):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(int(timeout))
     try:
-        s.connect((host, 443))
+        s.connect((host, port))
     except Exception, e:
         return None
     s.send(hello)
@@ -176,7 +176,8 @@ def store_results(host_name, current_status):
             return message
 
 
-def scan_host(host):
+def scan_host(args):
+    host, port = args
     """ Scans a single host, logs into
 
     Returns:
@@ -187,7 +188,7 @@ def scan_host(host):
     host = str(host)
     if host in hosts_to_skip:
         return
-    result = is_vulnerable(host, opts.timeout)
+    result = is_vulnerable(host, port, opts.timeout)
     message = store_results(host, result)
     if opts.verbose:
         print message
@@ -201,6 +202,7 @@ def scan_hostlist(hostlist, threads=5):
         hostlist    -- Iterable with ip addresses
         threads     -- If specified, run in multithreading mode
     """
+    print hostlist
     task = threadpool.map_async(scan_host, hostlist)
     while True:
         print counter['Total'], "hosts done"
@@ -212,7 +214,7 @@ def scan_hostlist(hostlist, threads=5):
 
 
 def clean_hostlist(args):
-    """ Returns list of iterables
+    """ Returns list of iterables, contained host and port(default 443)
     Examples:
     >>> hostlist = ["127.0.0.1", "127.0.0.2"]
     >>> clean_hostlist(hostlist)
@@ -223,16 +225,18 @@ def clean_hostlist(args):
         # If it contains any alphanumerics, it might be a domain name
         if any(c.isalpha() for c in i):
             # Special hack, because alexa top x list is kind of weird
+            p = i.split(':')
             i = i.split('/')[0]
-            hosts.append(i)
+            hosts.append((i,443 if len(p)<2 else int(p[1])))
         # If arg contains a / we assume its a network name
         elif '/' in i:
             networks.append(netaddr.IPNetwork(i))
         else:
-            hosts.append(i)
+            p = i.split(':')
+            hosts.append((p[0], 443 if len(p)<2 else int(p[1])))
     result = []
-    for i in networks:
-        result.append(i)
+    for net in networks:
+        result.append([(str(ip), 443) for ip in net])
     if hosts:
         result.append(hosts)
     return result
@@ -333,6 +337,7 @@ def main():
 
     # For every network in args, convert it to a netaddr network, so we can iterate through each host
     remote_networks = clean_hostlist(args)
+    print remote_networks
     for network in remote_networks:
         scan_hostlist(network, threads=opts.threads)
 
