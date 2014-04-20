@@ -337,7 +337,6 @@ def main():
 
     # For every network in args, convert it to a netaddr network, so we can iterate through each host
     remote_networks = clean_hostlist(args)
-    print remote_networks
     for network in remote_networks:
         scan_hostlist(network, threads=opts.threads)
 
