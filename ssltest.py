@@ -202,7 +202,6 @@ def scan_hostlist(hostlist, threads=5):
         hostlist    -- Iterable with ip addresses
         threads     -- If specified, run in multithreading mode
     """
-    print hostlist
     task = threadpool.map_async(scan_host, hostlist)
     while True:
         print counter['Total'], "hosts done"
@@ -226,7 +225,7 @@ def clean_hostlist(args):
         if any(c.isalpha() for c in i):
             # Special hack, because alexa top x list is kind of weird
             p = i.split(':')
-            i = i.split('/')[0]
+            i = p[0].split('/')[0]
             hosts.append((i,443 if len(p)<2 else int(p[1])))
         # If arg contains a / we assume its a network name
         elif '/' in i:
